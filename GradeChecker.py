@@ -1,5 +1,3 @@
-from pprint import pprint
-
 import credentials as cred
 from selenium import webdriver
 
@@ -21,6 +19,8 @@ def checkGrade(link):
     for row in gradesWrapper:
         score = row.find_element_by_class_name("grade")
         name = row.find_element_by_class_name("gradable").text
+        if "\n" in name:
+            name, due, type = name.split("\n")
         pointsPossible = score.find_elements_by_class_name("pointsPossible")
         if len(pointsPossible) > 0:
             pointsPossible = pointsPossible[0].text
@@ -50,8 +50,14 @@ def checkGrades():
     grades = {}
     for key in cred.links:
         grades[key] = checkGrade(cred.links[key])
-    printGrades(grades)
     return grades
 
-login()
-checkGrades()
+
+
+def main():
+    login()
+    grades = checkGrades()
+    printGrades(grades)
+
+if __name__ == '__main__':
+    main()
