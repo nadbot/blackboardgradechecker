@@ -2,6 +2,9 @@ import discord
 import asyncio
 import GradeChecker
 import credentials as cred
+from tabulate import tabulate
+from pprint import pprint
+
 
 client = discord.Client()
 running = False
@@ -14,9 +17,9 @@ async def on_message(message):
 
     if message.content.startswith('!hello'):
         await message.channel.send("Still running")
-    if message.content.startswith('!checkGrade'):
-        grade = GradeChecker.checkGrades()
-        await  message.channel.send(grade)
+    if message.content.startswith('!checkGrades'):
+        grades = GradeChecker.checkGrades()
+        await message.channel.send("```"+createTableforGrades(grades)+"```")
     if message.content.startswith('!grade'):
         msg = 'Hello {0.author.mention}'.format(message)
         user = discord.utils.get(client.get_all_members(), id=message.author.id)
@@ -31,6 +34,19 @@ async def on_message(message):
 
         # await client.send(user, msg)
 
+
+def createTableforGrades(grades):
+    string = ""
+    for key in grades:
+        print(key)
+        gradeForCourse = []
+        for item in grades[key]:
+            grade = [item['name'],item['score']]
+            gradeForCourse.append(grade)
+        print(tabulate(gradeForCourse,["Item","Grade"]))
+        string+=key+"\n"
+        string+=tabulate(gradeForCourse,["Item","Grade"])+"\n\n"
+    return string
 
 @client.event
 async def on_ready():
