@@ -7,6 +7,7 @@ from tabulate import tabulate
 
 client = discord.Client()
 running = False
+observing = []
 
 
 @client.event
@@ -82,9 +83,9 @@ async def on_message(message):
                 await message.channel.send(str(item_chosen['name']) + " will be observed for changes")
                 channel = message.channel
                 # prevents it from running multiple instances at once
-                # TODO if observing multiple grades, make list and send updates for each
+                set_items_to_observe(course_chosen,item_chosen['name'])
                 if not running:
-                    client.loop.create_task(my_background_task(channel, course_chosen, item_id))
+                    client.loop.create_task(my_background_task(channel, cred.background_task_time))
                     running = True
             else:
                 await message.channel.send(str(item_chosen['name']) + " will not be observed for changes")
@@ -117,16 +118,29 @@ async def on_ready():
     print('------')
 
 
-# TODO improve to be able to watch several grades at once
-async def my_background_task(channel, course, item_id, time=180):
+def set_items_to_observe(course, name):
+    """
+    Method to append new item to observe. Will automatically update the list of items that will be checked regularly
+    :param course: Course for which the grade is being observed
+    :param name: Name of the item that is being observed
+    :return: Nothing, appends to global variable
+    """
+    global observing
+    print("Adding to observing:")
+    print(observing)
+    observing.append({'course': course, 'name': name})
+    print("New content:")
+    print(observing)
+
+
+async def my_background_task(channel, time=180):
     """
     Asynchronous method used to check regularly for updates on specific grades.
     :param channel: Channel on which update should be sent
-    :param course: Course for which the grade is being observed
-    :param item_id: ID of the item that is being observed
     :param time: Time in seconds how often the background task should run
     :return: returns nothing, prints to user once it finds something
     """
+    global observing
     global running
     # await client.wait_until_ready()
     counter = 0
@@ -134,19 +148,32 @@ async def my_background_task(channel, course, item_id, time=180):
     while True:
         # check for updates
         grades = GradeChecker.check_grades()
-        observed_grade = grades[course][item_id]
-        # look if observed grade is still not available
-        if "-" not in observed_grade['score']:
-            # if it is available, stop the background task and send info to user
-            await channel.send("Your grade for " + observed_grade['name'] + " is " + str(observed_grade['score']))
+        for item in observing:
+            print("Looping through observed items")
+            print(item)
+            course = item['course']
+            name = item['name']
+            print(grades[course])
+            observed_grade = {}
+            for element in grades[course]:
+                if element['name'] == name:
+                    observed_grade = element
+            # look if observed grade is still not available
+            if "-" not in observed_grade['score']:
+                # if it is available, stop the background task and send info to user
+                await channel.send("Your grade for " + observed_grade['name'] + " is " + str(observed_grade['score']))
+                # running = False
+                # break
+                observing.remove({'course': course, 'name': name})
+        if len(observing) == 0:
             running = False
             break
         else:
             # otherwise try again in 3 minutes
             counter += 1
             print(counter)
-            print(observed_grade)
-            print("Running Async task after "+str(time)+" seconds")
+            print(observing)
+            print("Running Async task after " + str(time) + " seconds")
             await asyncio.sleep(time)  # task runs every 180 seconds
 
 
