@@ -2,7 +2,7 @@ import credentials as cred
 from selenium import webdriver
 import time
 
-driver = webdriver.Chrome('C:/images/chromedriver.exe')
+driver = webdriver.Chrome(cred.path_to_chromedriver)
 
 
 def login():
