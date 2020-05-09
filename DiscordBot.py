@@ -19,7 +19,6 @@ async def on_message(message):
 
     # TODO improve commands: commands lower and upper case working, make list clickable (show recommandations?)
     # TODO put commands inside methods
-    # TODO reload grades only every few minutes and not with every call
     if message.content.startswith('!hello'):
         await message.channel.send("Hello")
     # simple help method
