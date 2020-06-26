@@ -40,8 +40,14 @@ def check_grade(link):
         # get name of assignment.
         # If it is multiple lines divide it into name, due date and type of assignment
         name = row.find_element_by_class_name("gradable").text
+        name.strip()
         if "\n" in name:
-            name, due, type_of_assignment = name.split("\n")
+            split = name.split("\n")
+            if len(split) >= 2:
+                name = split[0]
+                due = split[1]
+            if len(split) >= 3:
+                type_of_assignment = split[2]
         # get maximum amount of points possible (usually 10)
         points_possible = score.find_elements_by_class_name("pointsPossible")
         if len(points_possible) > 0:
