@@ -3,6 +3,7 @@ from selenium import webdriver
 import time
 
 driver = webdriver.Chrome(cred.path_to_chromedriver)
+previous_grades = {}
 
 
 def login():
@@ -154,6 +155,44 @@ def has_access(link):
     return True
 
 
+def check_for_new_entries():
+    """
+    Function that checks for new entries and returns those that changed.
+    :return:
+    """
+    global previous_grades
+    grades = check_grades()
+    if len(previous_grades.keys()) == 0:
+        previous_grades = grades
+    else:
+        differences = compare(grades, previous_grades)
+        previous_grades = grades
+        return differences
+    return None
+
+def compare(grades_new, grades_old):
+    """
+    Compare two sets of dicts containing lists of dicts with the grades for each course
+    :param grades_new: new grades obtained
+    :param grades_old: previously saved grades
+    :return: Returns dict of differences
+    """
+    differences = {}
+    for course in grades_new:
+        marks_new = grades_new[course]
+        if course not in grades_old:
+            differences[course] = grades_new[course]
+            continue
+        marks_old = grades_old[course]
+        differences_course = []
+        for mark in marks_new:
+            if mark not in marks_old:
+                differences_course.append(mark)
+        if len(differences_course) > 0:
+            differences[course] = differences_course
+    return differences
+
+
 def main():
     """
     Main Method
@@ -162,7 +201,6 @@ def main():
     login()
     grades = check_grades()
     print_grades(grades)
-
 
 if __name__ == '__main__':
     main()

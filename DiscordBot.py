@@ -7,25 +7,29 @@ from tabulate import tabulate
 
 client = discord.Client()
 running = False
+observing_changes = False
 observing = []
-
 
 @client.event
 async def on_message(message):
     global running
+    global observing_changes
     # we do not want the bot to reply to itself
     if message.author == client.user:
         return
 
-    # TODO improve commands: commands lower and upper case working, make list clickable (show recommandations?)
+    # TODO improve commands: commands lower and upper case working, make list clickable (show recommendations?)
     # TODO put commands inside methods
+
     if message.content.startswith('!hello'):
         await message.channel.send("Hello")
     # simple help method
     if message.content.startswith('!help'):
         await message.channel.send("Use !getClasses to refresh the classes which will be checked\n"
+                                   "Use !observeChanges to observe grades and get notification when new grade added\n"
+                                   "Use !stopObserving to stop observing the grades every few hours\n"
                                    "Use !showGrades to show all available grades in all courses\n"
-                                   "Use !showGrade to show a certain grade in a course. "
+                                   "Use !showGrade to show a certain grade in a course."
                                    "Choosing can be done by sending the corresponding number")
     # call getClasses function, which updates list of links for grades
     if message.content.startswith('!getClasses'):
@@ -33,6 +37,16 @@ async def on_message(message):
         if len(classes) == 0:
             await message.channel.send(
                 "Failed to find any classes. Please check if you have the correct module and are logged in")
+    if message.content.startswith('!observeChanges'):
+        await message.channel.send("The grades will be observed for changes.")
+        channel = message.channel
+        # prevents it from running multiple instances at once
+        if not observing_changes:
+            client.loop.create_task(observe_changes(channel, cred.background_task_time))
+            observing_changes = True
+    if message.content.startswith('!stopObserving'):
+        observing_changes = False
+        await message.channel.send("Observation has been stopped.")
     # show all grades
     if message.content.startswith('!showGrades'):
         grades = GradeChecker.check_grades()
@@ -172,6 +186,24 @@ async def my_background_task(channel, time=180):
             counter += 1
             print(counter)
             print(observing)
+            print("Running Async task after " + str(time) + " seconds")
+            await asyncio.sleep(time)  # task runs every 180 seconds
+
+
+async def observe_changes(channel, time=180):
+    """
+    Asynchronous method used to check regularly for updates on whether some grades changed/ new items were added.
+    :param channel: Channel on which update should be sent
+    :param time: Time in seconds how often the background task should run
+    :return: returns nothing, prints to user once it finds something
+    """
+    while observing_changes:
+        # check for updates
+        differences = GradeChecker.check_for_new_entries()
+        if differences:
+            await channel.send("```" + create_table_for_grades(differences) + "```")
+        else:
+            # otherwise try again in 3 minutes
             print("Running Async task after " + str(time) + " seconds")
             await asyncio.sleep(time)  # task runs every 180 seconds
 
