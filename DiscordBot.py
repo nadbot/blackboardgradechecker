@@ -4,7 +4,10 @@ import asyncio
 import GradeChecker
 import credentials as cred
 from tabulate import tabulate
+from datetime import datetime, timedelta
 
+starttime = datetime.utcnow()
+next_observation = 0
 client = discord.Client()
 running = False
 observing_changes = False
@@ -37,6 +40,18 @@ async def on_message(message):
         if len(classes) == 0:
             await message.channel.send(
                 "Failed to find any classes. Please check if you have the correct module and are logged in")
+    if message.content.startswith('!status'):
+        uptime = runtime()
+        if observing_changes:
+            remaining = time_left()
+            status = "Currently observing changes. Use !stopObserving to stop this."+'\n'+remaining
+        else:
+            status = "Currently not observing any changes. Use !observeChanges to observe them."
+        await message.channel.send(uptime+"\n"+status)
+
+    if message.content.startswith('!configuration'):
+        # TODO change time for async methods, change names of commands
+        pass
     if message.content.startswith('!observeChanges'):
         await message.channel.send("The grades will be observed for changes.")
         channel = message.channel
@@ -131,6 +146,24 @@ async def on_ready():
     print('------')
 
 
+def runtime():
+    now = datetime.utcnow()
+    elapsed = now - starttime
+    seconds = elapsed.seconds
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return "Running for {}d {}h {}m {}s".format(elapsed.days, hours, minutes, seconds)
+
+
+def time_left():
+    now = datetime.utcnow()
+    elapsed = next_observation - now
+    seconds = elapsed.seconds
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return "Next observation will be done in {}d {}h {}m {}s".format(elapsed.days, hours, minutes, seconds)
+
+
 def set_items_to_observe(course, name):
     """
     Method to append new item to observe. Will automatically update the list of items that will be checked regularly
@@ -197,6 +230,7 @@ async def observe_changes(channel, time=180):
     :param time: Time in seconds how often the background task should run
     :return: returns nothing, prints to user once it finds something
     """
+    global next_observation
     while observing_changes:
         # check for updates
         differences = GradeChecker.check_for_new_entries()
@@ -205,6 +239,7 @@ async def observe_changes(channel, time=180):
         else:
             # otherwise try again in 3 minutes
             print("Running Async task after " + str(time) + " seconds")
+            next_observation = datetime.utcnow()+timedelta(seconds=time)
             await asyncio.sleep(time)  # task runs every 180 seconds
 
 
